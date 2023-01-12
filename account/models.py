@@ -79,6 +79,7 @@ class UserProfile(models.Model):
                             default=RoleChoices.STUDENT,
                             null=True
                         )
+    qr_code             = models.CharField(max_length=16, null=True)
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}: {self.user.email}'
@@ -124,5 +125,7 @@ def generate_auth_token(sender, instance, created, **kwargs):
 def set_academic_year(sender, instance, created, **kwargs):
     if created:
         latest_acad_year = AcademicYear.objects.latest('timestamp')
+        qr_code = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         instance.academic_year = latest_acad_year
+        instance.qr_code = qr_code
         instance.save()
