@@ -1,6 +1,6 @@
 from attendance_system.settings import *
 
-DEBUG = True
+DEBUG = False
 
 SECRET_KEY = 'django-insecure-jri&oovjjn_5)uq#!6tbr=@z((!_!0s$(^ch@8+p$2k+cuh2b8'
 
