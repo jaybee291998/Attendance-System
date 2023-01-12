@@ -47,6 +47,11 @@ class UserProfile(models.Model):
         FEMALE = 'F', _('Female')
         OTHER = 'O', _('Other')
 
+    class RoleChoices(models.TextChoices):
+        STUDENT         = 'S', _('Student')
+        INSTRUCTOR      = 'I', _('Teacher')
+        ADMIN           = 'A', _('Head Teacher')
+
     user = models.OneToOneField(
         CustomUser,
         on_delete=models.CASCADE,
@@ -68,6 +73,12 @@ class UserProfile(models.Model):
     phone               = models.CharField(max_length=11, null=True)
     year_level          = models.ForeignKey(YearLevel, related_name="user_profiles", on_delete=models.CASCADE, null=True)
     section             = models.ForeignKey(Section, related_name="user_profiles", on_delete=models.CASCADE, null=True)
+    role                = models.CharField(
+                            max_length=1,
+                            choices=RoleChoices.choices,
+                            default=RoleChoices.STUDENT,
+                            null=True
+                        )
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}: {self.user.email}'
