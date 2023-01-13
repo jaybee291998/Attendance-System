@@ -1,3 +1,5 @@
+import random, string
+
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db.models.signals import post_save
 from django.db import models
@@ -110,7 +112,8 @@ class Period(models.Model):
 @receiver(post_save, sender=CustomUser)
 def create_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.create(user=instance)
+        qr_code = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+        UserProfile.objects.create(user=instance, qr_code=qr_code)
 
 @receiver(post_save, sender=CustomUser)
 def save_profile(sender, instance, **kwargs):
@@ -125,7 +128,5 @@ def generate_auth_token(sender, instance, created, **kwargs):
 def set_academic_year(sender, instance, created, **kwargs):
     if created:
         latest_acad_year = AcademicYear.objects.latest('timestamp')
-        qr_code = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
         instance.academic_year = latest_acad_year
-        instance.qr_code = qr_code
         instance.save()

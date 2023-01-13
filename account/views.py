@@ -8,7 +8,9 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
-from .serializers import CustomUserSerializer
+from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer
+from .permissions import OwnerOnly, InstructorOnly
+from .models import YearLevel, Section
 
 User = get_user_model()
 
@@ -25,6 +27,47 @@ class UserList(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class UserProfileDetail(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, OwnerOnly]
+
+    # def get_object(self, pk):
+    #     try:
+    #         user_profile = UserProfile.objects.get(pk=pk)
+    #         return user_profile;
+    #     except  UserProfile.DoesNotExist:
+            # return None
+
+    # def get(self, request, pk, format=None):
+    #     user_profile = self.get_object(pk)
+    #     if user_profile is not None:
+    #         self.check_object_permissions()
+    #         serializer = UserProfileSerializer(user_profile)
+    #         return Response(serializer.data, status=status.HTTP_200_OK)
+    def get(self, request, format=None):
+        serializer = UserProfileSerializer(request.user.profile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, format=None):
+        user_profile = request.user.profile
+        serializer = UserProfileSerializer(user_profile, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class YearLevelAndSectionList(APIView):
+    def get(self, request, format=None):
+        year_levels = YearLevel.objects.all()
+        year_level_serializer = YearLevelSerializer(year_levels, many=True)
+        sections = Section.objects.all()
+        section_serializer = SectionSerializer(sections, many=True)
+        context = {
+            "year_levels": year_level_serializer.data,
+            "sections": section_serializer.data
+        }
+        return Response(context, status=status.HTTP_200_OK)
+
 @api_view(['POST', ])
 def login(request):
     context = {}
@@ -40,7 +83,9 @@ def login(request):
             token = Token.objects.create(user=user)
         context['response'] = "successfully authenticated"
         context['token'] = token.key
-        context['account_details'] = CustomUserSerializer(user).data;
+        context['account_details'] = CustomUserSerializer(user).data
+        context['profile'] = UserProfileSerializer(user.profile).data
+
         return Response(context, status=status.HTTP_200_OK)
 
     # it failed
