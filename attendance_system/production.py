@@ -2,9 +2,11 @@ from attendance_system.settings import *
 
 DEBUG = False
 
-SECRET_KEY = 'django-insecure-jri&oovjjn_5)uq#!6tbr=@z((!_!0s$(^ch@8+p$2k+cuh2b8'
+SECRET_KEY = os.getenv("SECRET_KEY")
+PROD_HOSTS = os.getenv("PROD_HOSTS")
 
-ALLOWED_HOSTS = ['127.0.0.1:5500', 'attendancehub.pythonanywhere.com']
+ALLOWED_HOSTS = ['127.0.0.1:5500']
+ALLOWED_HOSTS.append(PROD_HOSTS)
 
 STATIC_ROOT = '/home/attendancehub/Attendance-System/static'
 
@@ -18,8 +20,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'attendancehub$default',
         'USER': 'attendancehub',
-        'PASSWORD': "K1yUDI!'TwC:`)gwCsz-hm&^`",
-        'HOST': 'attendancehub.mysql.pythonanywhere-services.com',
+        'PASSWORD': os.getenv("PROD_DB_PASS"),
+        'HOST': os.getenv("PROD_DB_HOST"),
     }
 }
 
