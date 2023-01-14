@@ -8,5 +8,6 @@ urlpatterns = [
     path('public/', views.public, name='public'),
     path('user-details/', views.get_account_details, name="account_details"),
     path('user-profile/', views.UserProfileDetail.as_view(), name="profile_detail"),
-    path('year-section/', views.YearLevelAndSectionList.as_view(), name="year_level_and_section")
+    path('year-section/', views.YearLevelAndSectionList.as_view(), name="year_level_and_section"),
+    path('register-with-profile/', views.CreateUserWithProfile.as_view(), name="create_user_with_profile")
 ]

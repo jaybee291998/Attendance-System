@@ -66,7 +66,8 @@ class YearLevelAndSectionList(APIView):
             "year_levels": year_level_serializer.data,
             "sections": section_serializer.data
         }
-        return Response(context, status=status.HTTP_200_OK)
+        return Response(context
+            , status=status.HTTP_200_OK)
 
 @api_view(['POST', ])
 def login(request):
@@ -93,6 +94,21 @@ def login(request):
     context['error_message'] = "invalid ceredentials"
     
     return Response(context, status=status.HTTP_401_UNAUTHORIZED)
+
+class CreateUserWithProfile(APIView):
+    def post(self, request, format=None):
+        # print(request.data)
+        serializer = CustomUserSerializer(data=request.data["user"])
+        if serializer.is_valid():
+            serializer.save()
+            user = User.objects.get(email=request.data["user"]["email"])
+            profile_serializer = UserProfileSerializer(user.profile, data=request.data["user_profile"])
+            if profile_serializer.is_valid():
+                profile_serializer.save()
+                return Response(profile_serializer.data, status=status.HTTP_202_ACCEPTED)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET',])
 @authentication_classes([TokenAuthentication, ])
