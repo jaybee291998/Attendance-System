@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, UserProfile, YearLevel, Section
+from .models import CustomUser, UserProfile, YearLevel, Section, Period, Subject, AcademicYear
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -57,3 +57,28 @@ class SectionSerializer(DynamicFieldsModelSerializer):
         model = Section
         fields = '__all__'
         read_only_fields = ['name', 'year_level']
+
+class SubjectSerializer(DynamicFieldsModelSerializer):
+    class Meta:
+        model = Subject
+        fields = '__all__'
+        read_only_fields = ['name']
+
+class PeriodSerializer(DynamicFieldsModelSerializer):
+
+    def validate(self, data):
+        section = data['section']
+        subject = data['subject']
+        latest_acad_year = AcademicYear.objects.latest('timestamp')
+        same_period = Period.objects.filter(section=section).filter(subject=subject).filter(academic_year=latest_acad_year)
+        if same_period.exists():
+            raise serializers.ValidationError({
+                'section': f'A period with the same section and subject already exists({latest_acad_year})',
+                'first_instructor': f'This instructor "{same_period[:1].get().instructor.profile}" has already registered this period'
+                })
+        return data;
+
+    class Meta:
+        model = Period
+        fields = '__all__'
+        read_only_fields = ['instructor', 'academic_year']

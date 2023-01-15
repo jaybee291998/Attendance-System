@@ -8,9 +8,9 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
-from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer
+from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer, PeriodSerializer, SubjectSerializer
 from .permissions import OwnerOnly, InstructorOnly
-from .models import YearLevel, Section, UserProfile
+from .models import YearLevel, Section, UserProfile, Period, Subject
 
 User = get_user_model()
 
@@ -125,6 +125,27 @@ class GetAllRegisteredUserProfile(APIView):
             }
             return Response(error, status=status.HTTP_401_UNAUTHORIZED)
 
+class PeriodList(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, InstructorOnly]
+
+    def get(self, request, format=None):
+        periods = request.user.periods.all();
+        serializer = PeriodSerializer(periods, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, format=None):
+        serializer = PeriodSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(instructor=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SubjectList(APIView):
+    def get(self, request, format=None):
+        subjects = Subject.objects.all()
+        serializer = SubjectSerializer(subjects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET',])

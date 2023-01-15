@@ -9,5 +9,6 @@ class OwnerOnly(permissions.BasePermission):
 class InstructorOnly(permissions.BasePermission):
 
 	def has_permission(self, request, view):
-		if self.user.profile.role == 'I':
+		if request.user.profile.role == 'I':
 			return True
+		return False
