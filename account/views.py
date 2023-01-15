@@ -10,7 +10,7 @@ from rest_framework.authtoken.models import Token
 
 from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer
 from .permissions import OwnerOnly, InstructorOnly
-from .models import YearLevel, Section
+from .models import YearLevel, Section, UserProfile
 
 User = get_user_model()
 
@@ -108,6 +108,23 @@ class CreateUserWithProfile(APIView):
                 return Response(profile_serializer.data, status=status.HTTP_202_ACCEPTED)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class GetAllRegisteredUserProfile(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        user_role = request.user.profile.role
+        if user_role == 'I' or user_role == 'A':
+            user_profiles = UserProfile.objects.all()
+            serializer = UserProfileSerializer(user_profiles, many=True, fields=('id', 'first_name', 'last_name', 'year_level', 'section', 'qr_code'))
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            error = {
+                "unauthorized" : "you must be an instructor or an admin to access this"
+            }
+            return Response(error, status=status.HTTP_401_UNAUTHORIZED)
+
 
 
 @api_view(['GET',])
