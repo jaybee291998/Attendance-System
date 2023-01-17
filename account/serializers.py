@@ -40,6 +40,8 @@ class UserProfileSerializer(DynamicFieldsModelSerializer):
     def validate(self, data):
         if data['year_level'] != data['section'].year_level:
             raise serializers.ValidationError({'section':'section must be in the year level'})
+        # to do 
+        # first_name and last_name must be unique
         return data
     class Meta:
         model = UserProfile
@@ -82,3 +84,9 @@ class PeriodSerializer(DynamicFieldsModelSerializer):
         model = Period
         fields = '__all__'
         read_only_fields = ['instructor', 'academic_year']
+
+class AcademicYearSerializer(DynamicFieldsModelSerializer):
+    class Meta:
+        model = AcademicYear
+        fields = '__all__'
+        read_only_fields = ['start_date', 'end_date']

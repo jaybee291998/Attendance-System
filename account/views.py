@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
 from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer, PeriodSerializer, SubjectSerializer
-from .permissions import OwnerOnly, InstructorOnly
+from .permissions import OwnerOnly, InstructorOnly,InstructorOrAdministratorOnly
 from .models import YearLevel, Section, UserProfile, Period, Subject
 
 User = get_user_model()
@@ -106,6 +106,8 @@ class CreateUserWithProfile(APIView):
             if profile_serializer.is_valid():
                 profile_serializer.save()
                 return Response(profile_serializer.data, status=status.HTTP_202_ACCEPTED)
+            else:
+                return Response(profile_serializer.error, status=HTTP_400_BAD_REQUEST)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -127,10 +129,14 @@ class GetAllRegisteredUserProfile(APIView):
 
 class PeriodList(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated, InstructorOnly]
+    permission_classes = [IsAuthenticated, InstructorOrAdministratorOnly]
 
     def get(self, request, format=None):
-        periods = request.user.periods.all();
+        user_role = request.user.profile.role;
+        if user_role == 'A':
+            periods = Period.objects.all()
+        else:
+            periods = request.user.periods.all();
         serializer = PeriodSerializer(periods, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
