@@ -12,5 +12,6 @@ urlpatterns = [
     path('register-with-profile/', views.CreateUserWithProfile.as_view(), name="create_user_with_profile"),
     path('get-all-registered-user/', views.GetAllRegisteredUserProfile.as_view(), name="get_all_registered_user_profile"),
     path('subjects/', views.SubjectList.as_view(), name="subject_list"),
-    path('period-list/', views.PeriodList.as_view(), name="period_list")
+    path('period-list/', views.PeriodList.as_view(), name="period_list"),
+    path('get-all-instructors/', views.GetAllInstructors.as_view(), name='get_all_instructors')
 ]

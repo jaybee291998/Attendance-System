@@ -20,3 +20,9 @@ class InstructorOrAdministratorOnly(permissions.BasePermission):
 		if user_role == 'I' or user_role == 'A':
 			return True
 		return False;
+
+class AdminOnly(permissions.BasePermission):
+
+	def has_permission(self, request, view):
+		user_role = request.user.profile.role
+		return user_role == 'A';

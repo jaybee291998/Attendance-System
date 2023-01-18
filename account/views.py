@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
 from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer, PeriodSerializer, SubjectSerializer
-from .permissions import OwnerOnly, InstructorOnly,InstructorOrAdministratorOnly
+from .permissions import OwnerOnly, InstructorOnly,InstructorOrAdministratorOnly, AdminOnly
 from .models import YearLevel, Section, UserProfile, Period, Subject
 
 User = get_user_model()
@@ -56,6 +56,7 @@ class UserProfileDetail(APIView):
             return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class YearLevelAndSectionList(APIView):
     def get(self, request, format=None):
         year_levels = YearLevel.objects.all()
@@ -66,8 +67,16 @@ class YearLevelAndSectionList(APIView):
             "year_levels": year_level_serializer.data,
             "sections": section_serializer.data
         }
-        return Response(context
-            , status=status.HTTP_200_OK)
+        return Response(context, status=status.HTTP_200_OK)
+
+class GetAllInstructors(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, AdminOnly]
+
+    def get(self, request, format=None):
+        instructors = UserProfile.objects.filter(role='I')
+        serializer = UserProfileSerializer(instructors, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['POST', ])
 def login(request):
