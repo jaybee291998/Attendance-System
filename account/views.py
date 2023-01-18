@@ -99,7 +99,14 @@ class CreateUserWithProfile(APIView):
     def post(self, request, format=None):
         # print(request.data)
         serializer = CustomUserSerializer(data=request.data["user"])
+
         if serializer.is_valid():
+            first_name = request.data["user_profile"]["first_name"].lower()
+            last_name = request.data["user_profile"]["last_name"].lower()
+            print(f'{first_name} {last_name}')
+            existing_profile = UserProfile.objects.filter(first_name=first_name).filter(last_name=last_name)
+            print(existing_profile)
+            if existing_profile.exists(): return Response({'name_already_registered':f'The name "{first_name} {last_name}" is already is use by user_profile_id {existing_profile[:1].get().pk}'}, status=status.HTTP_400_BAD_REQUEST)
             serializer.save()
             user = User.objects.get(email=request.data["user"]["email"])
             profile_serializer = UserProfileSerializer(user.profile, data=request.data["user_profile"])

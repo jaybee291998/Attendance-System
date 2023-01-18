@@ -42,6 +42,13 @@ class UserProfileSerializer(DynamicFieldsModelSerializer):
             raise serializers.ValidationError({'section':'section must be in the year level'})
         # to do 
         # first_name and last_name must be unique
+
+        # normalize fields
+        data['first_name'] = data['first_name'].lower()
+        data['last_name'] = data['last_name'].lower()
+        data['middle_name'] = data['middle_name'].lower()
+        data['address'] = data['address'].lower()
+
         return data
     class Meta:
         model = UserProfile
