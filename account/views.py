@@ -123,10 +123,10 @@ class RequestInstructorshipList(APIView):
         user_role = request.user.profile.role 
         if user_role == 'S':
             existing_request = request.user.my_instructorship_request.all().filter(status='P')
-            if existing_request.exists(): return Response({'pending_request': 'you already have a pending instructorship request'})
+            if existing_request.exists(): return Response({'pending_request': 'you already have a pending instructorship request'}, status=status.HTTP_400_BAD_REQUEST)
             request = InstructorshipRequest.objects.create(requestee=request.user)
-            return Response({'pending_request': 'your request is now pending, please wait for approval or rejection'})
-        return Response({'request_instructorship': 'only students can request to be an instructor'})
+            return Response({'pending_request': 'your request is now pending, please wait for approval or rejection'}, status=status.HTTP_200_OK)
+        return Response({'request_instructorship': 'only students can request to be an instructor'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class RequestInstructorshipDetail(APIView):
