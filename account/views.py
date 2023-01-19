@@ -8,9 +8,9 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 
-from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer, PeriodSerializer, SubjectSerializer
+from .serializers import CustomUserSerializer, UserProfileSerializer, YearLevelSerializer, SectionSerializer, PeriodSerializer, SubjectSerializer, InstructorshipRequestSerializer
 from .permissions import OwnerOnly, InstructorOnly,InstructorOrAdministratorOnly, AdminOnly
-from .models import YearLevel, Section, UserProfile, Period, Subject
+from .models import YearLevel, Section, UserProfile, Period, Subject, InstructorshipRequest
 
 User = get_user_model()
 
@@ -69,14 +69,107 @@ class YearLevelAndSectionList(APIView):
         }
         return Response(context, status=status.HTTP_200_OK)
 
-class GetAllInstructors(APIView):
+class GetAllMembers(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated, AdminOnly]
 
     def get(self, request, format=None):
-        instructors = UserProfile.objects.filter(role='I')
-        serializer = UserProfileSerializer(instructors, many=True)
+        role = request.query_params.get('role')
+        if role is not None:
+            if len(role) == 1:
+                if role == 'I':
+                    user_profiles = UserProfile.objects.filter(role='I')
+                elif role == 'S':
+                    user_profiles = UserProfile.objects.filter(role='S')
+            else:
+                user_profiles = UserProfile.objects.all()
+        else:
+            user_profiles = UserProfile.objects.all()
+
+        serializer = UserProfileSerializer(user_profiles, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class RequestInstructorshipList(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, format=None):
+        user_role = request.user.profile.role 
+        if user_role == 'S':
+            request = request.user.my_instructorship_request.all()
+            serializer = InstructorshipRequestSerializer(request, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        elif user_role == 'A':
+            request_status = request.query_params.get('status')
+            if request_status is not None:
+                if(len(request_status) == 1):
+                    verified_status = None
+                    if request_status == 'P': verified_status = 'P'
+                    elif request_status == 'A': verified_status = 'A'
+                    elif request_status == 'R': verified_status = 'R'
+
+                    if verified_status is not None:
+                        request = InstructorshipRequest.objects.filter(status=verified_status)
+                        serializer = InstructorshipRequestSerializer(request, many=True)
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+
+            request = InstructorshipRequest.objects.all()
+            serializer = InstructorshipRequestSerializer(request, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        return Response({'unauthorized': 'only students and admin can access this resource'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    def post(self, request, format=None):
+        user_role = request.user.profile.role 
+        if user_role == 'S':
+            existing_request = request.user.my_instructorship_request.all().filter(status='P')
+            if existing_request.exists(): return Response({'pending_request': 'you already have a pending instructorship request'})
+            request = InstructorshipRequest.objects.create(requestee=request.user)
+            return Response({'pending_request': 'your request is now pending, please wait for approval or rejection'})
+        return Response({'request_instructorship': 'only students can request to be an instructor'})
+
+
+class RequestInstructorshipDetail(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated, AdminOnly]
+
+    def get_object(self, request_pk):
+        try:
+            request = InstructorshipRequest.objects.get(pk=request_pk)
+        except InstructorshipRequest.DoesNotExist:
+            return None
+        return request
+
+    def put(self, request, request_pk, format=None):
+        instructorship_request = self.get_object(request_pk)
+        if instructorship_request is not None:
+            if instructorship_request.status != 'P': return Response({'not_allowed': 'this request has already been processed, the status can no longer be changed'})
+            request_status = request.query_params.get('status')
+            if request_status is not None:
+                if(len(request_status) == 1):
+                    verified_status = None
+                    # if request_status == 'P': verified_status = 'P'
+                    if request_status == 'A': verified_status = 'A'
+                    elif request_status == 'R': verified_status = 'R'
+
+                    if verified_status is not None:
+                        old_status = instructorship_request.status
+                        instructorship_request.status = verified_status
+                        instructorship_request.approvee = request.user
+                        instructorship_request.save()
+                        if verified_status == 'A':
+                            requestee_profile = instructorship_request.requestee.profile
+                            requestee_profile.role = 'I'
+                            requestee_profile.save()
+                        return Response({'request_updated': f'request status has been updated from {old_status} to {verified_status}'}, status=status.HTTP_200_OK)
+                    else:
+                        return Response({'invalid_status': 'valid statuses are A, R'}, status=status.HTTP_400_BAD_REQUEST)
+                else:
+                    return Response({'invalid_status':'a status is one char'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return Response({'no_status': 'please provide a status'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'invalid_instructorship_request': 'the instructorship_request is incvalid'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST', ])
 def login(request):

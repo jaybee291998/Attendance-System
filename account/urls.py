@@ -13,5 +13,7 @@ urlpatterns = [
     path('get-all-registered-user/', views.GetAllRegisteredUserProfile.as_view(), name="get_all_registered_user_profile"),
     path('subjects/', views.SubjectList.as_view(), name="subject_list"),
     path('period-list/', views.PeriodList.as_view(), name="period_list"),
-    path('get-all-instructors/', views.GetAllInstructors.as_view(), name='get_all_instructors')
+    path('get-all-members/', views.GetAllMembers.as_view(), name='get_all_members'),
+    path('request-instructorship-list/', views.RequestInstructorshipList.as_view(), name="request_instructorship_list"),
+    path('request-instructorship-detail/<int:request_pk>/', views.RequestInstructorshipDetail.as_view(), name='request_instructorship_detail')
 ]

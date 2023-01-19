@@ -109,6 +109,21 @@ class Period(models.Model):
     def __str__(self):
         return f'{self.section.year_level.name} {self.section.name} - {self.subject.name}'
 
+class InstructorshipRequest(models.Model):
+
+    class StatusChoices(models.TextChoices):
+        PENDING         = 'P', _('Pending')
+        ACCEPTED        = 'A', _('Accepted')
+        REJECTED        = 'R', _('Rejected')
+
+    requestee           = models.ForeignKey(CustomUser, related_name="my_instructorship_request", on_delete=models.CASCADE, null=True)
+    status              = models.CharField(max_length=1, choices=StatusChoices.choices, default=StatusChoices.PENDING, null=True)
+    approvee            = models.ForeignKey(CustomUser, related_name="instructorship_request", on_delete=models.CASCADE, null=True)
+    timestamp           = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.requestee}({self.status})'
+
 @receiver(post_save, sender=CustomUser)
 def create_profile(sender, instance, created, **kwargs):
     if created:

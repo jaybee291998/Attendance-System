@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, UserProfile, YearLevel, Section, Period, Subject, AcademicYear
+from .models import CustomUser, UserProfile, YearLevel, Section, Period, Subject, AcademicYear, InstructorshipRequest
 
 class DynamicFieldsModelSerializer(serializers.ModelSerializer):
     """
@@ -97,3 +97,9 @@ class AcademicYearSerializer(DynamicFieldsModelSerializer):
         model = AcademicYear
         fields = '__all__'
         read_only_fields = ['start_date', 'end_date']
+
+class InstructorshipRequestSerializer(DynamicFieldsModelSerializer):
+    class Meta:
+        model = InstructorshipRequest
+        fields = '__all__'
+        read_only_fields = ['requestee', 'approvee']
