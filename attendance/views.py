@@ -10,6 +10,7 @@ from rest_framework.authtoken.models import Token
 
 from account.permissions import OwnerOnly, InstructorOnly, InstructorOrAdministratorOnly
 
+from attendance.models import AttendanceRecord
 from account.models import Period, CustomUser, UserProfile, AcademicYear
 from account.serializers import UserProfileSerializer, AcademicYearSerializer
 from .models import AttendanceRecord
@@ -85,33 +86,51 @@ class AttendanceRecordList(APIView):
 		period = self.get_object(period_pk, request.user)
 		if period is None: return Response({'period': 'period does not exists or you have no right to access this period'}, status=status.HTTP_401_UNAUTHORIZED)
 		if type(request.data) != list: return Response({'invalid_data': 'please provide a list of strings'}, status=status.HTTP_400_BAD_REQUEST)
+		start_date = date.today()
+		end_date = start_date + timedelta(days=1)
 		attendance_records = []
+		excuse_records = []
 		invalid_records = []
 		valid_records = []
+		already_recorded = []
 		for qr_code in request.data:
 			if type(qr_code) != str: continue
 			student_profile = None
 
+			isExcuse = len(qr_code) == 17
+
+			if isExcuse:
+				qr_code = qr_code[:16]
+
 			try: student_profile = UserProfile.objects.get(qr_code=qr_code)
 			except UserProfile.DoesNotExist: continue
+
+			if AttendanceRecord.objects.filter(timestamp__range=[start_date, end_date]).filter(period=period.pk).filter(user_profile=student_profile.pk).exists():
+				already_recorded.append(f'This student {student_profile} is already recorded')
+				continue
 
 			if student_profile.section != period.section:
 				invalid_records.append(f'This student {student_profile} is not on this period')
 				continue
 
 			new_attendance_record = {'user_profile': student_profile.pk, 'period': period.pk}
-			valid_records.append(f'{student_profile.first_name} {student_profile.middle_name[:1].upper()}. {student_profile.last_name}')
+			if isExcuse:
+				excuse_records.append(f'{student_profile.first_name} {student_profile.middle_name[:1].upper()}. {student_profile.last_name}')
+				new_attendance_record["status"] = 'E'
+			else:
+				valid_records.append(f'{student_profile.first_name} {student_profile.middle_name[:1].upper()}. {student_profile.last_name}')
 			attendance_records.append(new_attendance_record)
 		if len(attendance_records) == 0:
 			d = {
 				'no_valid_qr': 'no valid qr code has been detected',
-				'invalid_records': invalid_records
+				'invalid_records': invalid_records,
+				"already_recorded":already_recorded
 			} 
 			return Response(d, status=status.HTTP_400_BAD_REQUEST)
 		serializer = AttendanceRecordSerializer(data=attendance_records, many=True)
 		if serializer.is_valid():
 			serializer.save()
-			d = {"success": serializer.data, "failed": invalid_records, "valid_records": valid_records}
+			d = {"success": serializer.data, "failed": invalid_records, "valid_records": valid_records, "excused_records":excuse_records, "already_recorded":already_recorded}
 			return Response(d, status=status.HTTP_201_CREATED)
 		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
