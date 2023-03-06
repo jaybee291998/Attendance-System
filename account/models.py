@@ -75,6 +75,7 @@ class UserProfile(models.Model):
     phone               = models.CharField(max_length=11, null=True)
     year_level          = models.ForeignKey(YearLevel, related_name="user_profiles", on_delete=models.CASCADE, null=True)
     section             = models.ForeignKey(Section, related_name="user_profiles", on_delete=models.CASCADE, null=True)
+    lrn                 = models.CharField(max_length=12, null=True, default="")
     role                = models.CharField(
                             max_length=1,
                             choices=RoleChoices.choices,
