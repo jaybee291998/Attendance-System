@@ -38,8 +38,10 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 class UserProfileSerializer(DynamicFieldsModelSerializer):
     def validate(self, data):
-        if data['year_level'] != data['section'].year_level:
-            raise serializers.ValidationError({'section':'section must be in the year level'})
+        # print(data['year_level'])
+        if data['year_level'] is not None:
+            if data['year_level'] != data['section'].year_level:
+                raise serializers.ValidationError({'section':'section must be in the year level'})
         # to do 
         # first_name and last_name must be unique
 

@@ -221,10 +221,17 @@ class CreateUserWithProfile(APIView):
             existing_profile = UserProfile.objects.filter(first_name=first_name).filter(last_name=last_name)
             print(existing_profile)
             if existing_profile.exists(): return Response({'name_already_registered':f'The name "{first_name} {last_name}" is already is use by user_profile_id {existing_profile[:1].get().pk}'}, status=status.HTTP_400_BAD_REQUEST)
-            serializer.save()
+            custom_user = serializer.save()
             user = User.objects.get(email=request.data["user"]["email"])
             profile_serializer = UserProfileSerializer(user.profile, data=request.data["user_profile"])
             if profile_serializer.is_valid():
+                role = request.query_params.get('role')
+                verified_role = None
+                if role is not None:
+                    if role == 'A': verified_role = 'A'
+                    elif role == 'I': verified_role = 'I'
+                if verified_role is not None:
+                    InstructorshipRequest.objects.create(requestee=custom_user, role=verified_role)
                 profile_serializer.save()
                 return Response(profile_serializer.data, status=status.HTTP_202_ACCEPTED)
             else:
