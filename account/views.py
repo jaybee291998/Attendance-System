@@ -101,19 +101,26 @@ class RequestInstructorshipList(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         elif user_role == 'A':
             request_status = request.query_params.get('status')
+            role = request.query_params.get('role')
+            verified_status = None
+            verified_role = None
             if request_status is not None:
                 if(len(request_status) == 1):
-                    verified_status = None
                     if request_status == 'P': verified_status = 'P'
                     elif request_status == 'A': verified_status = 'A'
                     elif request_status == 'R': verified_status = 'R'
-
-                    if verified_status is not None:
-                        request = InstructorshipRequest.objects.filter(status=verified_status)
-                        serializer = InstructorshipRequestSerializer(request, many=True)
-                        return Response(serializer.data, status=status.HTTP_200_OK)
+            if role is not None:
+                if(len(role) == 1):
+                    if role == 'I': verified_role = 'I'
+                    elif role == 'A': verified_role = 'A'
 
             request = InstructorshipRequest.objects.all()
+            if verified_status is not None: request = request.filter(status=verified_status)
+            if verified_role is not None: request = request.filter(role=verified_role)
+                # serializer = InstructorshipRequestSerializer(request, many=True)
+                # return Response(serializer.data, status=status.HTTP_200_OK)
+
+            
             serializer = InstructorshipRequestSerializer(request, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -123,10 +130,15 @@ class RequestInstructorshipList(APIView):
         user_role = request.user.profile.role 
         if user_role == 'S':
             existing_request = request.user.my_instructorship_request.all().filter(status='P')
-            if existing_request.exists(): return Response({'pending_request': 'you already have a pending instructorship request'}, status=status.HTTP_400_BAD_REQUEST)
-            request = InstructorshipRequest.objects.create(requestee=request.user)
+            if existing_request.exists(): return Response({'pending_request': 'you already have a pending request'}, status=status.HTTP_400_BAD_REQUEST)
+            role = request.query_params.get('role')
+            verified_role = 'I'
+            if role is not None:
+                if role == 'A':
+                    verified_role = 'A'
+            request = InstructorshipRequest.objects.create(requestee=request.user, role=verified_role)
             return Response({'pending_request': 'your request is now pending, please wait for approval or rejection'}, status=status.HTTP_200_OK)
-        return Response({'request_instructorship': 'only students can request to be an instructor'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({'request_instructorship': 'only students can request to be an instructor/head teacher'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class RequestInstructorshipDetail(APIView):
@@ -159,7 +171,7 @@ class RequestInstructorshipDetail(APIView):
                         instructorship_request.save()
                         if verified_status == 'A':
                             requestee_profile = instructorship_request.requestee.profile
-                            requestee_profile.role = 'I'
+                            requestee_profile.role = instructorship_request.role
                             requestee_profile.save()
                         return Response({'request_updated': f'request status has been updated from {old_status} to {verified_status}'}, status=status.HTTP_200_OK)
                     else:

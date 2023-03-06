@@ -111,12 +111,17 @@ class Period(models.Model):
 
 class InstructorshipRequest(models.Model):
 
+    class RoleChoices(models.TextChoices):
+        INSTRUCTOR      = 'I', _('Teacher')
+        ADMIN           = 'A', _('Head Teacher')
+
     class StatusChoices(models.TextChoices):
         PENDING         = 'P', _('Pending')
         ACCEPTED        = 'A', _('Accepted')
         REJECTED        = 'R', _('Rejected')
 
     requestee           = models.ForeignKey(CustomUser, related_name="my_instructorship_request", on_delete=models.CASCADE, null=True)
+    role                = models.CharField(max_length=1, choices=RoleChoices.choices, default=RoleChoices.INSTRUCTOR, null=True)
     status              = models.CharField(max_length=1, choices=StatusChoices.choices, default=StatusChoices.PENDING, null=True)
     approvee            = models.ForeignKey(CustomUser, related_name="instructorship_request", on_delete=models.CASCADE, null=True)
     timestamp           = models.DateTimeField(auto_now_add=True)
