@@ -31,12 +31,26 @@ class AttendanceRecordList(APIView):
 
 		return None
 
+	def period_to_copy(self, period, period_to_copy_pk):
+		try:
+			period_to_copy = Period.objects.get(pk=period_to_copy_pk)
+		except Period.DoesNotExist:
+			return None
+
+		if period.section == period_to_copy.section: return period_to_copy
+
+		return None
+
 	def get(self, request, period_pk, format=None):
 		period = self.get_object(period_pk, request.user)
 		if period is not None:
 			start_date_str = request.query_params.get('start_date')
 			end_date_str = request.query_params.get('end_date')
 			academic_year_id = request.query_params.get('academic_year_id')
+			period_to_copy_pk = request.query_params.get('period_to_copy')
+			print(f'period_to_copy: {period_to_copy_pk}')
+			start_date = date.today()
+			end_date = start_date + timedelta(days=1)
 			print(period)
 
 			attendance_records = None
@@ -50,10 +64,14 @@ class AttendanceRecordList(APIView):
 					return Response({'invalid_date_str': 'please provide a valid date str YYYY-mm-dd'})
 				# print(f'start_date: {start_date}, end_date: {end_date}')
 				attendance_records = period.attendance_records.all().filter(timestamp__range=[start_date, end_date])
+			elif period_to_copy_pk is not None:
+				period_to_copy = self.period_to_copy(period, period_to_copy_pk)
+				if period_to_copy is not None:
+					attendance_records = period_to_copy.attendance_records.all().filter(timestamp__range=[start_date, end_date])
+				else:
+					return Response({'unauthorized':'the period your trying to access is a different section than your current period'}, status=status.HTTP_401_UNAUTHORIZED)
 			else:
 				# if start_date and end date are not provided the just give todays record
-				start_date = date.today()
-				end_date = start_date + timedelta(days=1)
 				# print(f'start_date: {start_date}, end_date: {end_date}')
 				attendance_records = period.attendance_records.all().filter(timestamp__range=[start_date, end_date])
 				# print(attendance_records)
@@ -134,4 +152,39 @@ class AttendanceRecordList(APIView):
 			return Response(d, status=status.HTTP_201_CREATED)
 		return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+	def put(self, request, period_pk, format=None):
+		period = self.get_object(period_pk, request.user)
+		if period is not None:
+			period_to_copy_pk = request.query_params.get('period_to_copy')
+			start_date = date.today()
+			end_date = start_date + timedelta(days=1)
+			print(period)
+
+			attendance_records = None
+			if period_to_copy_pk is not None:
+				period_to_copy = self.period_to_copy(period, period_to_copy_pk)
+				if period_to_copy is not None:
+					# delete prior records of periods before copying the attendance record to the period to copy
+					period.attendance_records.all().filter(timestamp__range=[start_date, end_date]).delete()
+					attendance_records_to_copy = period_to_copy.attendance_records.all().filter(timestamp__range=[start_date, end_date])
+					for rec in attendance_records_to_copy:
+						AttendanceRecord.objects.create(user_profile=rec.user_profile, status=rec.status, period=period)
+					attendance_records = period.attendance_records.all().filter(timestamp__range=[start_date, end_date])
+				else:
+					return Response({'unauthorized':'the period your trying to copy is a different section than your current period'}, status=status.HTTP_401_UNAUTHORIZED)
+			else:
+				return Response({'invalid':"please provide a period to copy"})
+
+			attendance_record_serializer = AttendanceRecordSerializer(attendance_records, many=True)
+
+			data = {
+				'status': "successfully copied attendance recrods",
+				'attendance_records': attendance_record_serializer.data
+			}
+			return Response(data, status=status.HTTP_200_OK)
+		
+		context = {
+			'error': 'period does not exists or you have no right to access this period'
+		}
+		return Response(context, status=status.HTTP_401_UNAUTHORIZED)
 

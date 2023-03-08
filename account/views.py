@@ -259,10 +259,26 @@ class PeriodList(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated, InstructorOrAdministratorOnly]
 
+    def get_object(self, period_pk, user):
+        try:
+            period = Period.objects.get(pk=period_pk)
+        except Period.DoesNotExist:
+            return None
+
+        if period.instructor == user: return period
+
+        return None
+
     def get(self, request, format=None):
         user_role = request.user.profile.role;
+        period_pk = request.query_params.get('period_pk')
+        period = None
+        if period_pk is not None: period = self.get_object(period_pk, request.user)
+
         if user_role == 'A':
             periods = Period.objects.all()
+        elif period is not None:
+            periods = Period.objects.filter(section=period.section)
         else:
             periods = request.user.periods.all();
         serializer = PeriodSerializer(periods, many=True)
