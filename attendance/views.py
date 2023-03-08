@@ -11,8 +11,8 @@ from rest_framework.authtoken.models import Token
 from account.permissions import OwnerOnly, InstructorOnly, InstructorOrAdministratorOnly
 
 from attendance.models import AttendanceRecord
-from account.models import Period, CustomUser, UserProfile, AcademicYear
-from account.serializers import UserProfileSerializer, AcademicYearSerializer
+from account.models import Period, Section, CustomUser, UserProfile, AcademicYear
+from account.serializers import UserProfileSerializer, AcademicYearSerializer, SectionSerializer, PeriodSerializer, SectionSerializer
 from .models import AttendanceRecord
 from .serializers import AttendanceRecordSerializer
 from datetime import date, datetime, timedelta
@@ -188,3 +188,56 @@ class AttendanceRecordList(APIView):
 		}
 		return Response(context, status=status.HTTP_401_UNAUTHORIZED)
 
+class SectionAttendanceRecord(APIView):
+	authentication_classes = [TokenAuthentication]
+	permission_classes = [InstructorOrAdministratorOnly]
+
+	def get_object(self, section_pk, user):
+		try:
+			section = Section.objects.get(pk=section_pk)
+		except Section.DoesNotExist:
+			return None
+		if user.profile.role == 'A': return section
+
+		return None
+
+	def get(self, request, section_pk, format=None):
+		section = self.get_object(section_pk, request.user)
+		if section is not None:
+			start_date_str = request.query_params.get('start_date')
+			start_date = date.today()
+			end_date = start_date + timedelta(days=1)
+
+			data = {'attendance_records':{}}
+			periods = section.periods.all()
+
+			empty = True
+
+			if start_date_str is not None:
+				# parse start_date
+				date_format = '%Y-%m-%d'
+				try:
+					start_date = datetime.strptime(start_date_str, date_format)
+				except ValueError:
+					return Response({'invalid_date_str': 'please provide a valid date str YYYY-mm-dd'})
+				end_date = start_date + timedelta(days=1)
+
+			for period in periods:
+				empty = False
+				attendance_records = period.attendance_records.all().filter(timestamp__range=[start_date, end_date])
+				attendance_record_serializer = AttendanceRecordSerializer(attendance_records, many=True)
+				data['attendance_records'][period.id] = attendance_record_serializer.data
+
+			if empty: return Response({'no_data': 'there is no data here'}, status=status.HTTP_400_BAD_REQUEST)
+			students = section.user_profiles.all().filter(role='S')
+			students_serializer = UserProfileSerializer(students, many=True)
+			period_serializer = PeriodSerializer(periods, many=True)
+			section_serializer = SectionSerializer(section)
+
+			data['section'] = section_serializer.data
+			data['students'] = students_serializer.data
+			data['periods'] = period_serializer.data
+
+			return Response(data, status=status.HTTP_200_OK)
+
+		return Response({'unauthorized': 'invalid section pk or your not authorized to access this resource'}, status=status.HTTP_401_UNAUTHORIZED)
